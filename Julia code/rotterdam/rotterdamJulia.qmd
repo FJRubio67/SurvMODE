@@ -15,6 +15,7 @@ execute:
 bibliography: references.bib
 ---
 
+
 # Models
 
 In this application, we model the recurrence (relapse) times of $n=2,939$ breast cancer patients from the `rotterdam` dataset in the R package `survival`. This is an observational dataset which includes information on recurrence times and censoring indicators (due to death or end of follow-up). We consider the following covariates: \texttt{age} (age at surgery, start of follow-up), `nodes` (number of positive lymph nodes), `size` (tumor size, dichotomised $0 =$ $\leq 50$, $1 =$ $>50$), and `trt` (chemotherapy, binary). The maximum follow-up duration is $19.3$ years, with $52\%$ of patients experiencing recurrence during the follow-up period. $580$ patients received chemotherapy, while $334$ patients also received hormonal treatment, with the majority ($306$) being on the non-chemotherapy group. 
@@ -22,7 +23,7 @@ In this application, we model the recurrence (relapse) times of $n=2,939$ breast
 Since some patients received treatment, it is reasonable to expect a reduction in the hazard associated with cancer recurrence. Consequently, we model this dataset using the hazard-response model, 
 
 $$
-\begin{cases}
+  \begin{cases}
 h'(t)  =  \lambda h(t) \left(1 - \dfrac{h(t)}{\kappa}\right) - \alpha q(t) h(t), & h(0) = h_0 \\
 q'(t) =  \mu q(t) \left( 1- \dfrac{q(t)}{\kappa} \right) -\alpha q(t) h(t)  ,  &  q(0) = q_0 \\ 
 H'(t)  =  h(t), & H(0) = 0,
@@ -32,14 +33,12 @@ q'(t) =  \mu q(t) \left( 1- \dfrac{q(t)}{\kappa} \right) -\alpha q(t) h(t)  ,  &
 H'(t)  =  h(t), & H(0) = 0,
 \end{cases}
 $$
-
-incorporating covariates on the corresponding parameters as described in 
+  
+  incorporating covariates on the corresponding parameters as described in 
 
 > Christen, J.A. and Rubio, F.J. (2025). Hazard-based distributional regression via ordinary differential equations. Submitted.
 
 This selected regression model includes: $(\text{intercept}, \texttt{nodes}, \texttt{trt})$ for $\lambda$, $(\text{intercept}, \texttt{nodes})$ for $\kappa$, $(\text{intercept}, \texttt{nodes}, \texttt{trt})$ for $\alpha$, and $(\text{intercept}, \texttt{age}, \texttt{size}, \texttt{trt})$ for $\mu$.
-
-
 
 ################################################################################
 ################################################################################
@@ -53,11 +52,11 @@ This selected regression model includes: $(\text{intercept}, \texttt{nodes}, \te
 
 #=
 ****************************************************************************
-  Required packages
+Required packages
 ****************************************************************************
-  =#
-  
-  using Plots
+=#
+
+using Plots
 using DifferentialEquations
 using LinearAlgebra
 using CSV
@@ -90,13 +89,13 @@ include("routines.jl")
 
 #=
 ****************************************************************************
-  Data preparation
+Data preparation
 ****************************************************************************
-  =#
-  
-  
-  #= Data =#
-  df_full = CSV.File("rotterdamFull.csv");
+=#
+
+
+#= Data =#
+df_full = CSV.File("rotterdamFull.csv");
 df0 = CSV.File("rotterdam.csv");
 
 
@@ -105,29 +104,29 @@ size_bin = collect(df_full.size)
 sizes = zeros(size(size_bin)[1])
 
 for i in 1:size(size_bin)[1]
-if size_bin[i] == ">50"
-sizes[i] = 1.0
-else
-  sizes[i] = 0.0
-end
-end
+    if size_bin[i] == ">50"
+        sizes[i] = 1.0
+    else
+        sizes[i] = 0.0
+    end
+  end
 
 
 df = DataFrame( time = collect(df_full.rtime)./365.25, 
-status = collect(df_full.recur),
-nodes = scale(collect(df_full.nodes)),
-agec = scale(collect(df_full.age)),
-sizes = sizes,
-trt = convert(Vector{Float64}, collect(df_full.chemo)))
+                status = collect(df_full.recur),
+                nodes = scale(collect(df_full.nodes)),
+                agec = scale(collect(df_full.age)),
+                sizes = sizes,
+                trt = convert(Vector{Float64}, collect(df_full.chemo)))
 
 # Removing inconsistent Data
 indcon = zeros(size(df_full)[1])
 for i in 1:size(df_full)[1]
-if ((df_full.rtime[i] < df_full.dtime[i]) && (df_full.recur[i] == 0) && (df_full.death[i] == 1))
-  indcon[i] = 0
-else
-  indcon[i] = 1
-end
+    if ((df_full.rtime[i] < df_full.dtime[i]) && (df_full.recur[i] == 0) && (df_full.death[i] == 1))
+        indcon[i] = 0
+    else
+        indcon[i] = 1
+    end
 end
 indcon = collect(Bool, (indcon))
 
@@ -161,14 +160,14 @@ lu0 = [log(1.0e-2), log(1.0e-6), 0.0]
 
 #=
 ****************************************************************************
-  Data preparation for best model
+Data preparation for best model
 ****************************************************************************
-  =#
-  
-  # Design matrix including variables of interest for model building
-  # age + sizes + nodes + trt
-  des_full = hcat( df.agec, df.sizes, df.nodes, df.trt)
+=#
 
+# Design matrix including variables of interest for model building
+# age + sizes + nodes + trt
+des_full = hcat( df.agec, df.sizes, df.nodes, df.trt)
+  
 # Design matrices for the regression models for each parameter 
 #(intercept,age,sizes,nodes,trt)
 # lambda: intercept + nodes + trt
@@ -229,40 +228,40 @@ plot_histograms_by_column(postsamp_mcmc)
 ```{julia}
 #=
 -------------------------------------------------------------------------------------------------- 
-  # Marginal Survival: Chemotherapy vs. No-Chemotherapy
-  # Averaged over observed covariates, plug-in MLE.
-  -------------------------------------------------------------------------------------------------- 
-  =#
-  
-  # Estimated parameters
-  paramsHR_MLE = hcat( exp.(des_l * MLER[1:p_l]),
-       exp.(des_k * MLER[(p_l+1):(p_l+p_k)]),
-       exp.(des_a * MLER[(p_l+p_k+1):(p_l+p_k+p_a)]),
-       exp.(des_b * MLER[(p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)]) )
+# Marginal Survival: Chemotherapy vs. No-Chemotherapy
+# Averaged over observed covariates, plug-in MLE.
+-------------------------------------------------------------------------------------------------- 
+=#
 
+# Estimated parameters
+paramsHR_MLE = hcat( exp.(des_l * MLER[1:p_l]),
+                       exp.(des_k * MLER[(p_l+1):(p_l+p_k)]),
+                       exp.(des_a * MLER[(p_l+p_k+1):(p_l+p_k+p_a)]),
+                       exp.(des_b * MLER[(p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)]) )
 
+    
 #=
 ====================================
-  # No Chemotherapy group
-  ===================================
-  =#
-  
-  indNT = findall(x->x==0, df.trt)
+# No Chemotherapy group
+===================================
+=#
+
+indNT = findall(x->x==0, df.trt)
 nNT = length(indNT)
 
 
 
 # Marginal survival function
 function MNTSurv(t)
-OUT = zeros(Float64, nNT, 3)
-for i in 1:nNT
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR_MLE[indNT[i], :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, nNT, 3)
+    for i in 1:nNT
+        sol = solve(ODEProblem(HRJ, u0, t, paramsHR_MLE[indNT[i], :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-surp = mean(exp.(-OUT[:, 3]))
+    surp = mean(exp.(-OUT[:, 3]))
 
-return surp
+    return surp
 
 end
 
@@ -270,26 +269,26 @@ end
 
 #=
 ====================================
-  # Chemotherapy group
-  ===================================
-  =#
-  
-  indT = findall(x->x==1, df.trt)
+# Chemotherapy group
+===================================
+=#
+
+indT = findall(x->x==1, df.trt)
 nT = length(indT)
 
 
 
 # Marginal survival function
 function MTSurv(t)
-OUT = zeros(Float64, nT, 3)
-for i in 1:nT
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR_MLE[indT[i], :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, nT, 3)
+    for i in 1:nT
+        sol = solve(ODEProblem(HRJ, u0, t, paramsHR_MLE[indT[i], :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-surp = mean(exp.(-OUT[:, 3]))
+    surp = mean(exp.(-OUT[:, 3]))
 
-return surp
+    return surp
 
 end
 
@@ -306,30 +305,30 @@ ksurvival_probsT = km_T.survival
 
 # Comparison
 plot(ktimesNT, ksurvival_probsNT,
-     xlabel = "Time (years)", ylabel = "Population Survival", title = "",
-     xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "gray", ylims = (0,1), linestyle=:solid)
+    xlabel = "Time (years)", ylabel = "Population Survival", title = "",
+  xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
+  xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+  xguidefontsize=18, yguidefontsize=18, linewidth=3,
+  linecolor = "gray", ylims = (0,1), linestyle=:solid)
 
 plot!(ktimesT, ksurvival_probsT,
-      xlabel = "Time (years)", ylabel = "Population Survival", title = "",
-      xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
-      xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-      xguidefontsize=18, yguidefontsize=18, linewidth=3,
-      linecolor = "gray", ylims = (0,1), linestyle=:solid)
+    xlabel = "Time (years)", ylabel = "Population Survival", title = "",
+  xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
+  xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+  xguidefontsize=18, yguidefontsize=18, linewidth=3,
+  linecolor = "gray", ylims = (0,1), linestyle=:solid)
 
 
 plot!(t -> MNTSurv(t),
-      xlabel="Time (years)", ylabel="Survival", title="",
-      xlims=(0, maximum(times)), xticks=0:2:20, label="",
-      xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
-      xguidefontsize=18, yguidefontsize=18, linewidth=3,
-      linecolor="blue", legend = true, labels= "No Chemotherapy")
+    xlabel="Time (years)", ylabel="Survival", title="",
+    xlims=(0, maximum(times)), xticks=0:2:20, label="",
+    xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
+    xguidefontsize=18, yguidefontsize=18, linewidth=3,
+    linecolor="blue", legend = true, labels= "No Chemotherapy")
 
 plot!(t -> MTSurv(t), xlims=(0, maximum(times)), 
-      xguidefontsize=18, yguidefontsize=18, linewidth=3,
-      linecolor = "red", linestyle=:solid, legend = true, labels = "Chemotherapy")
+    xguidefontsize=18, yguidefontsize=18, linewidth=3,
+    linecolor = "red", linestyle=:solid, legend = true, labels = "Chemotherapy")
 ```
 
 
@@ -355,13 +354,13 @@ end
 
 #=
 ====================================
-  # Chemotherapy group
-  ===================================
-  =#
+# Chemotherapy group
+===================================
+=#
   
-  
-  # Marginal hazard function
-  function TMhaz(t)
+
+# Marginal hazard function
+function TMhaz(t)
 OUT = zeros(Float64, nT, 3)
 for i in 1:nT
 sol = solve(ODEProblem(HRJ, u0, t, paramsHR_MLE[indT[i], :]), Tsit5())
@@ -378,11 +377,11 @@ end
 ```{julia}
 
 plot(t -> NTMhaz(t),
-     xlabel="Time (years)", ylabel="Hazard", title="",
-     xlims=(0, maximum(times)), xticks=0:2:20, label="",
-     xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor="blue", legend = true, labels= "No Chemotherapy")
+      xlabel="Time (years)", ylabel="Hazard", title="",
+      xlims=(0, maximum(times)), xticks=0:2:20, label="",
+      xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor="blue", legend = true, labels= "No Chemotherapy")
 
 plot!(t -> TMhaz(t), xlims=(0, maximum(times)), 
       xguidefontsize=18, yguidefontsize=18, linewidth=3,
@@ -431,46 +430,46 @@ solTE = solve(ODEProblem(HRJ, u0, 35.0, parTE); alg_hints=[:stiff],saveat=0.05);
 ```{julia}
 # Comparison: hazard functions
 plot(solNTE.t,hcat(solNTE.u...)[1,:],
-     xlabel = "Time (years)", ylabel = "Hazard", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims=(0, 0.1), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Hazard", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims=(0, 0.1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTE.t,hcat(solTE.u...)[1,:], linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 ```{julia}
 # Comparison: response functions
 plot(solNTE.t,hcat(solNTE.u...)[2,:],
-     xlabel = "Time (years)", ylabel = "Response", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims=(0, 3.0), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Response", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims=(0, 3.0), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTE.t,hcat(solTE.u...)[2,:], linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 ```{julia}
 # Comparison: survival functions
 plot(solNTE.t,exp.(-hcat(solNTE.u...)[3,:]),
-     xlabel = "Time (years)", ylabel = "Survival", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims = (0,1), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Survival", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTE.t,exp.(-hcat(solTE.u...)[3,:]), linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 
@@ -515,47 +514,47 @@ solTL = solve(ODEProblem(HRJ, u0, 35.0, parTL, Tsit5()),saveat=0.05);
 ```{julia}
 # Comparison: hazard functions
 plot(solNTL.t,hcat(solNTL.u...)[1,:],
-     xlabel = "Time (years)", ylabel = "Hazard", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims = (0,0.6), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Hazard", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,0.6), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTL.t,hcat(solTL.u...)[1,:], linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 
 ```
 
 ```{julia}
 # Comparison: response functions
 plot(solNTL.t,hcat(solNTL.u...)[2,:],
-     xlabel = "Time (years)", ylabel = "Response", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims = (0,0.5), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Response", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,0.5), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTL.t,hcat(solTL.u...)[2,:], linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 ```{julia}
 # Comparison: survival functions
 plot(solNTL.t,exp.(-hcat(solNTL.u...)[3,:]),
-     xlabel = "Time (years)", ylabel = "Survival", title = "",
-     xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
-     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
-     xguidefontsize=18, yguidefontsize=18, linewidth=3,
-     linecolor = "red", ylims = (0,1), linestyle=:solid,
-     legend = true, labels = "No Chemotherapy")
+xlabel = "Time (years)", ylabel = "Survival", title = "",
+xlims = (0.0,maximum(times)),   xticks = 0:5:35, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
 plot!(solTL.t,exp.(-hcat(solTL.u...)[3,:]), linewidth=3,
-      linecolor = "blue", linestyle=:solid,
-      legend = true, labels = "Chemotherapy")
+linecolor = "blue", linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 ################################################################################
@@ -580,170 +579,113 @@ indp = 1:k;
 postsampp = copy(postsamp_app)[indp, :];
 
 
-
 # All posterior parameters
-lambdap = exp.(
-  postsampp[:, 1:p_l] * des_l')'
-  
-  kappap = exp.(
-    postsampp[:, (p_l + 1):(p_l + p_k)] * des_k')'
-    
-    alphap = exp.(
-      postsampp[:, (p_l + p_k + 1):(p_l + p_k + p_a)] * des_a')'
-      
-      betap = exp.(
-postsampp[:, (p_l + p_k + p_a + 1):(p_l + p_k + p_a + p_b)] * des_b')'
-
+lambdap = exp.(postsampp[:, 1:p_l] * des_l')';
+kappap = exp.(postsampp[:, (p_l+1):(p_l+p_k)] * des_k')';
+alphap = exp.(postsampp[:, (p_l+p_k+1):(p_l+p_k+p_a)] * des_a')';
+betap = exp.(postsampp[:, (p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)] * des_b')';
 
 
 # Group 1: : No Chemotherapy
 
 function MNTPSurv(t)
-# Function to calculate the individual survival
-function indfuncNTPS(patID)
+    # Function to calculate the individual survival
+    function indfuncNTPS(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-surp = mean(exp.(-OUT[:, 3]))
+        surp = mean(exp.(-OUT[:, 3]))
 
-return surp
-end
+        return surp
+    end
 
-out = mean(indfuncNTPS.(indNT))
+    out = mean(indfuncNTPS.(indNT))
 
-return out
+    return out
 end
 
 
 # Group 2: : Chemotherapy
 
 function MTPSurv(t)
-# Function to calculate the individual survival
-function indfuncTPS(patID)
+    # Function to calculate the individual survival
+    function indfuncTPS(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-surp = mean(exp.(-OUT[:, 3]))
+        surp = mean(exp.(-OUT[:, 3]))
 
-return surp
-end
+        return surp
+    end
 
-out = mean(indfuncTPS.(indT))
+    out = mean(indfuncTPS.(indT))
 
-return out
+    return out
 end
 
 # Grid of values
-tps = [0.01:0.5:20.5
-]
+tps = [0.01:0.5:20.5;]
 ntps = length(tps)
 
-NTP_tps =  zeros(ntps)
-
+NTP_tps =  zeros(ntps);
 for i in 1:ntps
-NTP_tps[i] = MNTPSurv(tps[i])
+    NTP_tps[i] = MNTPSurv(tps[i])
 end
 
-TP_tps =  zeros(ntps)
-
+TP_tps =  zeros(ntps);
 for i in 1:ntps
-TP_tps[i] = MTPSurv(tps[i])
+    TP_tps[i] = MTPSurv(tps[i])
 end
 ```
 
 ```{julia}
 
 # Comparison
-plot(
-  ktimesNT,
-  ksurvival_probsNT,
-  xlabel = "Time (years)",
-  ylabel = "Predictive survival",
-  title = "",
-  xlims = (0.0001, maximum(times)),
-  xticks = 0:2:maximum(times),
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "gray",
-  ylims = (0, 1),
-  linestyle = :solid
-)
+plot(ktimesNT, ksurvival_probsNT,
+     xlabel = "Time (years)", ylabel = "Predictive survival", title = "",
+     xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
+     xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+     xguidefontsize=18, yguidefontsize=18, linewidth=3,
+     linecolor = "gray", ylims = (0,1), linestyle=:solid)
 
-plot ! (
-  ktimesT,
-  ksurvival_probsT,
-  xlabel = "Time (years)",
-  ylabel = "Predictive survival",
-  title = "",
-  xlims = (0.0001, maximum(times)),
-  xticks = 0:2:maximum(times),
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "gray",
-  ylims = (0, 1),
-  linestyle = :solid
-)
+plot!(ktimesT, ksurvival_probsT,
+      xlabel = "Time (years)", ylabel = "Predictive survival", title = "",
+      xlims = (0.0001,maximum(times)),   xticks = 0:2:maximum(times), label = "", 
+      xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor = "gray", ylims = (0,1), linestyle=:solid)
 
 
-plot ! (
-  tps,
-  NTP_tps,
-  xlabel = "Time (years)",
-  ylabel = "Predictive survival",
-  title = "",
-  xlims = (0, maximum(times)),
-  xticks = 0:2:20,
-  label = "",
-  xtickfont =
-    font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor =
-    "blue",
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot!(tps,NTP_tps,
+      xlabel="Time (years)", ylabel="Predictive survival", title="",
+      xlims=(0, maximum(times)), xticks=0:2:20, label="",
+      xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor="blue", legend = true, labels= "No Chemotherapy")
 
-plot ! (
-  tps,
-  TP_tps,
-  xlims = (0, maximum(times)),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tps,TP_tps, xlims=(0, maximum(times)), 
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor = "red", linestyle=:solid, legend = true, labels = "Chemotherapy")
 ```
 
 ## Marginal Posterior predictive hazard: Chemotherapy vs. No-Chemotherapy
@@ -754,43 +696,48 @@ plot ! (
 # Group 1: : No Chemotherapy
 
 function NTPMHaz(t)
-# Function to calculate the individual survival
-function indfuncNTPS(patID)
+    # Function to calculate the individual survival
+    function indfuncNTPS(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-surp = mean(exp.(-OUT[:, 3]))
+        surp = mean(exp.(-OUT[:, 3]))
 
-return surp
-end
+        return surp
+    end
+    
+        function indfuncNTPden(patID)
 
-function indfuncNTPden(patID)
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        mden = mean(exp.(-OUT[:, 3]) .* OUT[:, 1])
 
-mden = mean(exp.(-OUT[:, 3]) . * OUT[:, 1])
+        return mden
+    end
 
-return mden
-end
+    out = mean(indfuncNTPden.(indNT))/mean(indfuncNTPS.(indNT))
 
-out = mean(indfuncNTPden.(indNT)) /
-  mean(indfuncNTPS.(indNT))
-
-return out
+    return out
 end
 
 
@@ -798,63 +745,64 @@ end
 
 
 function TPMHaz(t)
-# Function to calculate the individual survival
-function indfuncTPS(patID)
+    # Function to calculate the individual survival
+    function indfuncTPS(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-surp = mean(exp.(-OUT[:, 3]))
+        surp = mean(exp.(-OUT[:, 3]))
 
-return surp
-end
+        return surp
+    end
+    
+        function indfuncTPden(patID)
 
-function indfuncTPden(patID)
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        mden = mean(exp.(-OUT[:, 3]) .* OUT[:, 1])
 
-mden = mean(exp.(-OUT[:, 3]) . * OUT[:, 1])
+        return mden
+    end
 
-return mden
-end
+    out = mean(indfuncTPden.(indT))/mean(indfuncTPS.(indT))
 
-out = mean(indfuncTPden.(indT)) /
-  mean(indfuncTPS.(indT))
-
-return out
+    return out
 end
 
 # Grid of values
-x1 = range(0.01, 5.0, length =
-     80) # More points in this range
-x2 = range(5.0, 20.0, length =
-     20) # Fewer points here
+x1 = range(0.01, 5.0, length=80) # More points in this range
+x2 = range(5.0, 20.0, length=20) # Fewer points here
 tph = vcat(x1, x2)
 ntph = length(tph)
 
-NTP_tph =  zeros(ntph)
-
+NTP_tph =  zeros(ntph);
 for i in 1:ntph
-NTP_tph[i] = NTPMHaz(tph[i])
+    NTP_tph[i] = NTPMHaz(tph[i])
 end
 
-TP_tph =  zeros(ntph)
-
+TP_tph =  zeros(ntph);
 for i in 1:ntph
-TP_tph[i] = TPMHaz(tph[i])
+    TP_tph[i] = TPMHaz(tph[i])
 end
 ```
 
@@ -863,41 +811,16 @@ end
 
 # Comparison
 
-plot(
-  tph,
-  NTP_tph,
-  xlabel = "Time (years)",
-  ylabel = "Predictive hazard",
-  title = "",
-  xlims = (0, maximum(times)),
-  xticks = 0:2:20,
-  label = "",
-  xtickfont =
-    font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor =
-    "blue",
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tph,NTP_tph,
+      xlabel="Time (years)", ylabel="Predictive hazard", title="",
+      xlims=(0, maximum(times)), xticks=0:2:20, label="",
+      xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor="blue", legend = true, labels= "No Chemotherapy")
 
-plot ! (
-  tph,
-  TP_tph,
-  xlims = (0, maximum(times)),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tph,TP_tph, xlims=(0, maximum(times)), 
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor = "red", linestyle=:solid, legend = true, labels = "Chemotherapy")
 ```
 
 
@@ -914,243 +837,185 @@ plot ! (
 # Group 1: : No Chemotherapy
 
 function MNTPResp(t)
-# Function to calculate the individual survival
-function indfuncNTPR(patID)
+    # Function to calculate the individual survival
+    function indfuncNTPR(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-resp = mean(OUT[:, 2])
+        resp = mean(OUT[:, 2])
 
-return resp
-end
+        return resp
+    end
 
-out = mean(indfuncNTPR.(indNT))
+    out = mean(indfuncNTPR.(indNT))
 
-return out
+    return out
 end
 
 
 # Group 2: : Chemotherapy
 
 function MTPResp(t)
-# Function to calculate the individual survival
-function indfuncTPR(patID)
+    # Function to calculate the individual survival
+    function indfuncTPR(patID)
 
-# Numerical solution for the ODE
-paramsHR = hcat(lambdap[patID, :], kappap[patID, :], alphap[patID, :], betap[patID, :])
+        # Numerical solution for the ODE
+        paramsHR = hcat(lambdap[patID, :],
+            kappap[patID, :],
+            alphap[patID, :],
+            betap[patID, :])
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, paramsHR[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-resp = mean(OUT[:, 2])
+        resp = mean(OUT[:, 2])
 
-return resp
-end
+        return resp
+    end
 
-out = mean(indfuncTPR.(indT))
+    out = mean(indfuncTPR.(indT))
 
-return out
+    return out
 end
 
 # Grid of values
-tpr1 = range(0.01, stop =
-       5, length = 25)
-tpr2 = range(5, stop =
-       20, length = 15)
+tpr1 = range(0.01, stop=5, length=25)
+tpr2 = range(5, stop=20, length=15)
 
 # Concatenate, removing duplicate at 5
 tpr = vcat(tpr1, tpr2[2:end])
 ntpr = length(tpr)
 
-NTP_tpr =  zeros(ntpr)
-
+NTP_tpr =  zeros(ntpr);
 for i in 1:ntpr
-NTP_tpr[i] = MNTPResp(tpr[i])
+    NTP_tpr[i] = MNTPResp(tpr[i])
 end
 
-TP_tpr =  zeros(ntpr)
-
+TP_tpr =  zeros(ntpr);
 for i in 1:ntpr
-TP_tpr[i] = MTPResp(tpr[i])
+    TP_tpr[i] = MTPResp(tpr[i])
 end
 
 
 # Comparison
 
-plot(
-  tpr,
-  NTP_tpr,
-  xlabel = "Time (years)",
-  ylabel = "Predictive response",
-  title = "",
-  xlims = (0, maximum(times)),
-  xticks = 0:2:20,
-  label = "",
-  xtickfont =
-    font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor =
-    "blue",
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tpr,NTP_tpr,
+      xlabel="Time (years)", ylabel="Predictive response", title="",
+      xlims=(0, maximum(times)), xticks=0:2:20, label="",
+      xtickfont=font(16, "Courier"), ytickfont=font(16, "Courier"),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor="blue", legend = true, labels= "No Chemotherapy")
 
-plot ! (
-  tpr,
-  TP_tpr,
-  xlims = (0, maximum(times)),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tpr,TP_tpr, xlims=(0, maximum(times)),
+      xguidefontsize=18, yguidefontsize=18, linewidth=3,
+      linecolor = "red", linestyle=:solid, legend = true, labels = "Chemotherapy")
 ```
 
 
 
 ## Conditional analysis. mean age + 0 size (<=50) + min nodes: Chemotherapy vs. No-Chemotherapy
 
-### Posterior predictive hazard.
+### Posterior predictive hazard. 
 
 ```{julia}
-#= --------------------------------------------------------------------------------------------------
+#=
+--------------------------------------------------------------------------------------------------
 # Predictive hazard: Chemotherapy vs. No-Chemotherapy
 # Averaged over posterior samples, conditional on covariate values
--------------------------------------------------------------------------------------------------- =#
+--------------------------------------------------------------------------------------------------
+=#
 
 # Posterior parameters : No Chemotherapy group
 lambdapNTE = exp.(postsampp[:, 1:p_l] * valx_lNTE)
-kappapNTE = exp.(postsampp[:, (p_l +
- 1):(p_l + p_k)] * valx_kNTE)
-alphapNTE = exp.(postsampp[:, (p_l +
- p_k + 1):(p_l + p_k + p_a)] * valx_aNTE)
-betapNTE = exp.(postsampp[:, (p_l +
-p_k + p_a + 1):(p_l + p_k + p_a + p_b)] * valx_bNTE)
+kappapNTE = exp.(postsampp[:, (p_l+1):(p_l+p_k)] * valx_kNTE)
+alphapNTE = exp.(postsampp[:, (p_l+p_k+1):(p_l+p_k+p_a)] * valx_aNTE)
+betapNTE = exp.(postsampp[:, (p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)] * valx_bNTE)
 parpNTE = hcat(lambdapNTE, kappapNTE, alphapNTE, betapNTE)
 
 # Posterior parameters : Chemotherapy group
 lambdapTE = exp.(postsampp[:, 1:p_l] * valx_lTE)
-kappapTE = exp.(postsampp[:, (p_l +
-1):(p_l + p_k)] * valx_kTE)
-alphapTE = exp.(postsampp[:, (p_l +
-p_k + 1):(p_l + p_k + p_a)] * valx_aTE)
-betapTE = exp.(postsampp[:, (p_l +
-       p_k + p_a + 1):(p_l + p_k + p_a + p_b)] * valx_bTE)
+kappapTE = exp.(postsampp[:, (p_l+1):(p_l+p_k)] * valx_kTE)
+alphapTE = exp.(postsampp[:, (p_l+p_k+1):(p_l+p_k+p_a)] * valx_aTE)
+betapTE = exp.(postsampp[:, (p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)] * valx_bTE)
 parpTE = hcat(lambdapTE, kappapTE, alphapTE, betapTE)
 
 # Predictive hazard: No Chemotherapy group
 function predHNTE(t)
-# Numerical solution for the ODE
+        # Numerical solution for the ODE
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-hpred = mean(exp.(-OUT[:, 3]) . * OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
+        hpred = mean(exp.(-OUT[:, 3]) .* OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
 
-return hpred
+        return hpred
 end
 
 
 # Predictive hazard: Chemotherapy group
 function predHTE(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-hpred = mean(exp.(-OUT[:, 3]) . * OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
+        hpred = mean(exp.(-OUT[:, 3]) .* OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
 
-return hpred
+        return hpred
 end
 
 
 
 # Comparison
-tvec = [0.01:0.1:20.5
-]
+tvec = [0.01:0.1:20.5;]
 ntvec = length(tvec)
 
 
-phnte = zeros(ntvec)
-
+phnte = zeros(ntvec);
 for i in 1:ntvec
-phnte[i] = predHNTE(tvec[i])
+    phnte[i] = predHNTE(tvec[i])
 end
 
-phte = zeros(ntvec)
-
+phte = zeros(ntvec);
 for i in 1:ntvec
-phte[i] = predHTE(tvec[i])
+    phte[i] = predHTE(tvec[i])
 end
 
 
 # Comparison: hazard functions
-plot(
-  tvec,
-  phnte,
-  xlabel = "Time (years)",
-  ylabel = "Hazard",
-  title = "Early",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 0.1),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,phnte,
+xlabel = "Time (years)", ylabel = "Hazard", title = "Early",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,0.1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  phte,
-  xlabel = "Time (years)",
-  ylabel = "Hazard",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 0.1),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,phte,
+xlabel = "Time (years)", ylabel = "Hazard", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,0.1), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 
@@ -1161,93 +1026,63 @@ plot ! (
 
 # Predictive response: No Chemotherapy group
 function predRNTE(t)
-# Numerical solution for the ODE
+        # Numerical solution for the ODE
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-rpred = mean(OUT[:, 2])
+        rpred = mean(OUT[:, 2]) 
 
-return rpred
+        return rpred
 end
 
 
 # Predictive response: Chemotherapy group
 function predRTE(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
+
+        rpred = mean(OUT[:, 2]) 
+
+        return rpred
 end
 
-rpred = mean(OUT[:, 2])
-
-return rpred
-end
 
 
-
-prnte = zeros(ntvec)
-
+prnte = zeros(ntvec);
 for i in 1:ntvec
-prnte[i] = predRNTE(tvec[i])
+    prnte[i] = predRNTE(tvec[i])
 end
 
-prte = zeros(ntvec)
-
+prte = zeros(ntvec);
 for i in 1:ntvec
-prte[i] = predRTE(tvec[i])
+    prte[i] = predRTE(tvec[i])
 end
 
 
 # Comparison: response functions
-plot(
-  tvec,
-  prnte,
-  xlabel = "Time (years)",
-  ylabel = "Response",
-  title = "Early",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 2.75),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,prnte,
+xlabel = "Time (years)", ylabel = "Response", title = "Early",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,2.75), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  prte,
-  xlabel = "Time (years)",
-  ylabel = "Response",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 2.75),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,prte,
+xlabel = "Time (years)", ylabel = "Response", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,2.75), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 
@@ -1258,93 +1093,63 @@ plot ! (
 
 # Predictive survival: No Chemotherapy group
 function predSNTE(t)
-# Numerical solution for the ODE
+        # Numerical solution for the ODE
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpNTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
 
-spred = mean(exp.(-OUT[:, 3]))
+        spred = mean(exp.(-OUT[:, 3])) 
 
-return spred
+        return spred
 end
 
 
 # Predictive survival: Chemotherapy group
 function predSTE(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
+        OUT = zeros(Float64, k, 3)
+        for i in 1:k
+            sol = solve(ODEProblem(HRJ, u0, t, parpTE[i, :]), Tsit5())
+            OUT[i, :] = reduce(vcat, sol.u[end, :])
+        end
+
+        spred = mean(exp.(-OUT[:, 3])) 
+
+        return spred
 end
 
-spred = mean(exp.(-OUT[:, 3]))
-
-return spred
-end
 
 
-
-psnte = zeros(ntvec)
-
+psnte = zeros(ntvec);
 for i in 1:ntvec
-psnte[i] = predSNTE(tvec[i])
+    psnte[i] = predSNTE(tvec[i])
 end
 
-pste = zeros(ntvec)
-
+pste = zeros(ntvec);
 for i in 1:ntvec
-pste[i] = predSTE(tvec[i])
+    pste[i] = predSTE(tvec[i])
 end
 
 
 # Comparison: survival functions
-plot(
-  tvec,
-  psnte,
-  xlabel = "Time (years)",
-  ylabel = "Survival",
-  title = "Early",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 1),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,psnte,
+xlabel = "Time (years)", ylabel = "Survival", title = "Early",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  pste,
-  xlabel = "Time (years)",
-  ylabel = "Survival",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 1),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,pste,
+xlabel = "Time (years)", ylabel = "Survival", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 ```
 
 ## Conditional analysis. older age (1.5) + 1 size + larger number of nodes (3.0): Chemotherapy vs. No-Chemotherapy
@@ -1353,121 +1158,87 @@ plot ! (
 ### Predictive hazards
 
 ```{julia}
-#=--------------------------------------------------------------------------------------------------
+#=
+--------------------------------------------------------------------------------------------------
 # Predictive hazard: Chemotherapy vs. No-Chemotherapy
---------------------------------------------------------------------------------------------------=#
+--------------------------------------------------------------------------------------------------
+=#
 
 # Posterior parameters : No Chemotherapy group
-lambdapNTL = exp.(postsampp[:, 1:p_l] * valx_lNTL)
-kappapNTL = exp.(postsampp[:, (p_l +
- 1):(p_l + p_k)] * valx_kNTL)
-alphapNTL = exp.(postsampp[:, (p_l +
- p_k + 1):(p_l + p_k + p_a)] * valx_aNTL)
-betapNTL = exp.(postsampp[:, (p_l +
-p_k + p_a + 1):(p_l + p_k + p_a + p_b)] * valx_bNTL)
+lambdapNTL = exp.(postsampp[:,1:p_l] * valx_lNTL)
+kappapNTL = exp.(postsampp[:,(p_l+1):(p_l+p_k)] * valx_kNTL)
+alphapNTL = exp.(postsampp[:,(p_l+p_k+1):(p_l+p_k+p_a)] * valx_aNTL)
+betapNTL = exp.(postsampp[:,(p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)] * valx_bNTL)
 parpNTL = hcat(lambdapNTL, kappapNTL, alphapNTL, betapNTL)
 
 # Posterior parameters : Chemotherapy group
-lambdapTL = exp.(postsampp[:, 1:p_l] * valx_lTL)
-kappapTL = exp.(postsampp[:, (p_l +
-1):(p_l + p_k)] * valx_kTL)
-alphapTL = exp.(postsampp[:, (p_l +
-p_k + 1):(p_l + p_k + p_a)] * valx_aTL)
-betapTL = exp.(postsampp[:, (p_l +
-       p_k + p_a + 1):(p_l + p_k + p_a + p_b)] * valx_bTL)
+lambdapTL = exp.(postsampp[:,1:p_l] * valx_lTL)
+kappapTL = exp.(postsampp[:,(p_l+1):(p_l+p_k)] * valx_kTL)
+alphapTL = exp.(postsampp[:,(p_l+p_k+1):(p_l+p_k+p_a)] * valx_aTL)
+betapTL = exp.(postsampp[:,(p_l+p_k+p_a+1):(p_l+p_k+p_a+p_b)] * valx_bTL)
 parpTL = hcat(lambdapTL, kappapTL, alphapTL, betapTL)
 
 # Predictive hazard: No Chemotherapy group
 function predHNTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-hpred = mean(exp.(-OUT[:, 3]). *
-       OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
+    hpred = mean(exp.(-OUT[:, 3]).*OUT[:,1] ) / mean(exp.(-OUT[:, 3]) )
 
-return hpred
-end
+    return hpred
+    end
 
 
 # Predictive hazard: Chemotherapy group
 function predHTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-hpred = mean(exp.(-OUT[:, 3]). *
-       OUT[:, 1]) / mean(exp.(-OUT[:, 3]))
+    hpred = mean(exp.(-OUT[:, 3]).*OUT[:,1] ) / mean(exp.(-OUT[:, 3]) )
 
-return hpred
-end
+    return hpred
+    end
 
 
 
 # Comparison
 phntl = zeros(ntvec)
 for i in 1:ntvec
-phntl[i] = predHNTL(tvec[i])
+    phntl[i] = predHNTL(tvec[i])
 end
 
 
 
 phtl = zeros(ntvec)
 for i in 1:ntvec
-phtl[i] = predHTL(tvec[i])
+    phtl[i] = predHTL(tvec[i])
 end
 
 
 # Comparison: hazard functions
-plot(
-  tvec,
-  phntl,
-  xlabel = "Time (years)",
-  ylabel = "Hazard",
-  title = "Late",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 0.6),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,phntl,
+xlabel = "Time (years)", ylabel = "Hazard", title = "Late",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,0.6), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  phtl,
-  xlabel = "Time (years)",
-  ylabel = "Hazard",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 0.6),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,phtl,
+xlabel = "Time (years)", ylabel = "Hazard", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,0.6), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 
 ```
 
@@ -1476,100 +1247,74 @@ plot ! (
 ### Predictive responses
 
 ```{julia}
-#=--------------------------------------------------------------------------------------------------
+#=
+--------------------------------------------------------------------------------------------------
 # Predictive response: Chemotherapy vs. No-Chemotherapy
---------------------------------------------------------------------------------------------------=#
+--------------------------------------------------------------------------------------------------
+=#
 
 
 # Predictive response: No Chemotherapy group
 function predRNTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-rpred = mean(OUT[:, 2])
+        rpred = mean(OUT[:, 2]) 
 
-return rpred
-end
+        return rpred
+    end
 
 
 # Predictive response: Chemotherapy group
 function predRTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-rpred = mean(OUT[:, 2])
+        rpred = mean(OUT[:, 2]) 
 
-return rpred
-end
+        return rpred
+    end
 
 
 
 # Comparison
 prntl = zeros(ntvec)
 for i in 1:ntvec
-prntl[i] = predRNTL(tvec[i])
+    prntl[i] = predRNTL(tvec[i])
 end
 
 
 
 prtl = zeros(ntvec)
 for i in 1:ntvec
-prtl[i] = predRTL(tvec[i])
+    prtl[i] = predRTL(tvec[i])
 end
 
 
 # Comparison: hazard functions
-plot(
-  tvec,
-  prntl,
-  xlabel = "Time (years)",
-  ylabel = "Response",
-  title = "Late",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 0.5),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,prntl,
+xlabel = "Time (years)", ylabel = "Response", title = "Late",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,0.5), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  prtl,
-  xlabel = "Time (years)",
-  ylabel = "Response",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 0.5),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,prtl,
+xlabel = "Time (years)", ylabel = "Response", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,0.5), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 
 ```
 
@@ -1578,99 +1323,72 @@ plot ! (
 ### Predictive survival
 
 ```{julia}
-
-#=--------------------------------------------------------------------------------------------------
+#=
+--------------------------------------------------------------------------------------------------
 # Predictive survival: Chemotherapy vs. No-Chemotherapy
---------------------------------------------------------------------------------------------------=#
+--------------------------------------------------------------------------------------------------
+=#
 
 
 # Predictive survival: No Chemotherapy group
 function predSNTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
-spred = mean(exp.(-OUT[:, 3]))
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpNTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
+        spred = mean(exp.(-OUT[:, 3])) 
 
-return spred
-end
+        return spred
+    end
 
 
 # Predictive survival: Chemotherapy group
 function predSTL(t)
 
-OUT = zeros(Float64, k, 3)
-for i in 1:k
-sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
-OUT[i, :] = reduce(vcat, sol.u[end, :])
-end
+    OUT = zeros(Float64, k, 3)
+    for i in 1:k
+        sol = solve(ODEProblem(HRJ, u0, t, parpTL[i, :]), Tsit5())
+        OUT[i, :] = reduce(vcat, sol.u[end, :])
+    end
 
-spred = mean(exp.(-OUT[:, 3]))
+        spred = mean(exp.(-OUT[:, 3])) 
 
-return spred
-end
+        return spred
+    end
 
 
 
 # Comparison
 psntl = zeros(ntvec)
 for i in 1:ntvec
-psntl[i] = predSNTL(tvec[i])
+    psntl[i] = predSNTL(tvec[i])
 end
 
 
 
 pstl = zeros(ntvec)
 for i in 1:ntvec
-pstl[i] = predSTL(tvec[i])
+    pstl[i] = predSTL(tvec[i])
 end
 
 
 # Comparison: hazard functions
-plot(
-  tvec,
-  psntl,
-  xlabel = "Time (years)",
-  ylabel = "Survival",
-  title = "Late",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "red",
-  ylims = (0, 1),
-  linestyle = :solid,
-  legend = true,
-  labels = "No Chemotherapy"
-)
+plot(tvec,psntl,
+xlabel = "Time (years)", ylabel = "Survival", title = "Late",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "red", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "No Chemotherapy")
 
-plot ! (
-  tvec,
-  pstl,
-  xlabel = "Time (years)",
-  ylabel = "Survival",
-  title = "",
-  xlims = (0.0, 20),
-  xticks = 0:5:20,
-  label = "",
-  xtickfont = font(16, "Courier"),
-  ytickfont = font(16, "Courier"),
-  xguidefontsize =
-    18,
-  yguidefontsize = 18,
-  linewidth = 3,
-  linecolor = "blue",
-  ylims = (0, 1),
-  linestyle = :solid,
-  legend = true,
-  labels = "Chemotherapy"
-)
+plot!(tvec,pstl,
+xlabel = "Time (years)", ylabel = "Survival", title = "",
+xlims = (0.0,20),   xticks = 0:5:20, label = "",
+xtickfont = font(16, "Courier"),  ytickfont = font(16, "Courier"),
+xguidefontsize=18, yguidefontsize=18, linewidth=3,
+linecolor = "blue", ylims = (0,1), linestyle=:solid,
+legend = true, labels = "Chemotherapy")
 
 ```
