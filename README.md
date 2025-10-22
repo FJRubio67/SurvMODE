@@ -7,5 +7,4 @@ This repository contains R and Julia code used in the two case studies of the ma
 1. The `R code` folder contains the R code used in the first case study.
 2. The `Julia code` folder contains the Julia code used in the second case study. This code can be used for model building and posterior sampling.
 
-
-More details coming soon ...
+See also: [HazReg](https://github.com/FJRubio67/HazReg), [HazReg.jl](https://github.com/FJRubio67/HazReg.jl)
