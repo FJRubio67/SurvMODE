@@ -1,6 +1,4 @@
-# SurvMODE
-
-## Survival Modelling via Ordinary Differential Equations
+# SurvMODE: Survival Modelling via Ordinary Differential Equations
 
 ## Overview
 
